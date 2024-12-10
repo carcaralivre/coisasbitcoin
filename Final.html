@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+            <style></style>
+        </head>
+        <body>
+            
+
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTC Table with Persistence</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #333;
+            color: #fff;
+        }
+        .form-control {
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+        }
+        .button-container {
+            margin-top: 10px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .button-container button {
+            background: none;
+            border: 1px solid #ddd;
+            font-size: 1rem;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .sticky {
+            background-color: #eee;
+            font-weight: bold;
+        }
+    </style>
+
+
+    <h1>BTC Transaction Table</h1>
+    <div class="form-control">
+        <label for="btcToUsd">BTC/USD: </label>
+        <input type="text" id="btcToUsd" placeholder="Digite o câmbio BTC/USD" oninput="formatCurrencyInput(this); updateAllRows()">
+        <label for="usdToBrl">USD/BRL: </label>
+        <input type="text" id="usdToBrl" placeholder="Digite o câmbio USD/BRL" oninput="formatCurrencyInput(this); updateAllRows()">
+    </div>
+
+    <table id="transactionTable">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>BTC</th>
+                <th>SATS</th>
+                <th>BRL</th>
+                <th>USD</th>
+                <th>BRL Comprado</th>
+                <th>Observation</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            <!-- Rows will be dynamically inserted here -->
+        </tbody>
+        <tfoot>
+            <tr class="sticky">
+                <td>Total</td>
+                <td id="totalBtc">0,00000000</td>
+                <td id="totalSats">0</td>
+                <td id="totalBrl">0,00</td>
+                <td id="totalUsd">0,00</td>
+                <td id="totalBrlComprado">0,00</td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="button-container">
+        <button id="addRow">Adicionar Linha</button>
+        <button id="removeRow">Remover Linha</button>
+        <button id="exportData">Exportar Dados</button>
+        <button id="importData">Importar Dados</button>
+        <input type="file" id="fileInput" style="display:none;">
+    </div>
+
+    <script>
+        const btcToUsdInput = document.getElementById('btcToUsd');
+        const usdToBrlInput = document.getElementById('usdToBrl');
+        const tableBody = document.getElementById('tableBody');
+        const totalBtc = document.getElementById('totalBtc');
+        const totalSats = document.getElementById('totalSats');
+        const totalBrl = document.getElementById('totalBrl');
+        const totalUsd = document.getElementById('totalUsd');
+        const totalBrlComprado = document.getElementById('totalBrlComprado');
+
+        const formatCurrencyInput = (input) => {
+            let value = input.value.replace(/\D/g, "");
+            if (value === "") value = "0";
+
+            const numericValue = parseInt(value);
+            const formatted = (numericValue / 100).toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+
+            input.value = formatted;
+        };
+
+        const formatBtcInputWithThousands = (input) => {
+            let value = input.value.replace(/\D/g, "");
+            if (value === "") value = "0";
+            value = (parseInt(value) / 100000000).toLocaleString('pt-BR', { minimumFractionDigits: 8, maximumFractionDigits: 8 });
+            input.value = value;
+        };
+
+        const parseCurrency = (value) => parseFloat(value.replaceAll('.', '').replace(',', '.')) || 0;
+        const formatNumber = (num, decimals = 2) => num.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+        const formatInteger = (num) => num.toLocaleString('pt-BR');
+
+        const updateTotals = () => {
+            let btcSum = 0, satsSum = 0, brlSum = 0, usdSum = 0, brlCompradoSum = 0;
+            Array.from(tableBody.children).forEach(row => {
+                const btc = parseCurrency(row.querySelector('.btc').value) || 0;
+                const sats = parseCurrency(row.querySelector('.sats').value) || 0;
+                const brl = parseCurrency(row.querySelector('.brl').value) || 0;
+                const usd = parseCurrency(row.querySelector('.usd').value) || 0;
+                const brlComprado = parseCurrency(row.querySelector('.brl-comprado').value) || 0;
+                btcSum += btc;
+                satsSum += sats;
+                brlSum += brl;
+                usdSum += usd;
+                brlCompradoSum += brlComprado;
+            });
+            totalBtc.textContent = formatNumber(btcSum, 8);
+            totalSats.textContent = formatInteger(satsSum);
+            totalBrl.textContent = formatNumber(brlSum, 2);
+            totalUsd.textContent = formatNumber(usdSum);
+            totalBrlComprado.textContent = formatNumber(brlCompradoSum, 2);
+        };
+
+        const createRow = (data = {}) => {
+            const row = document.createElement('tr');
+
+            row.innerHTML = `
+                <td><input type="date" class="date" value="${data.date || ''}"></td>
+                <td><input type="text" class="btc" oninput="formatBtcInputWithThousands(this); recalculateBtc(this)" value="${data.btc || '0,00000000'}"></td>
+                <td><input type="text" class="sats" step="1" readonly value="${data.sats || '0'}"></td>
+                <td><input type="text" class="brl" step="0.01" readonly value="${data.brl || '0,00'}"></td>
+                <td><input type="text" class="usd" step="0.01" readonly value="${data.usd || '0,00'}"></td>
+                <td><input type="text" class="brl-comprado" step="0.01" oninput="formatCurrencyInput(this); updateTotals()" value="${data.brlComprado || '0,00'}"></td>
+                <td><input type="text" class="observation" value="${data.observation || ''}"></td>
+            `;
+
+            tableBody.appendChild(row);
+        };
+
+        const recalculateBtc = (input) => {
+            const row = input.parentElement.parentElement;
+            const satsInput = row.querySelector('.sats');
+            const brlInput = row.querySelector('.brl');
+            const usdInput = row.querySelector('.usd');
+
+            const btc = parseCurrency(input.value);
+            const btcToUsd = parseCurrency(btcToUsdInput.value);
+            const usdToBrl = parseCurrency(usdToBrlInput.value);
+
+            satsInput.value = formatInteger(btc * 1e8);
+            usdInput.value = btcToUsd ? formatNumber(btc * btcToUsd) : "0,00";
+            brlInput.value = (btcToUsd && usdToBrl) ? formatNumber(btc * btcToUsd * usdToBrl, 2) : "0,00";
+
+            updateTotals();
+        };
+
+        const updateAllRows = () => {
+            Array.from(tableBody.children).forEach(row => {
+                recalculateBtc(row.querySelector('.btc'));
+            });
+            updateTotals();
+        };
+
+        const getCurrentTimestamp = () => {
+            const now = new Date();
+            const pad = (num) => String(num).padStart(2, '0');
+            return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+        };
+
+        const exportData = () => {
+            const data = {
+                btcToUsd: btcToUsdInput.value,
+                usdToBrl: usdToBrlInput.value,
+                rows: Array.from(tableBody.children).map(row => {
+                    return {
+                        date: row.querySelector('.date').value,
+                        btc: row.querySelector('.btc').value,
+                        sats: row.querySelector('.sats').value,
+                        brl: row.querySelector('.brl').value,
+                        usd: row.querySelector('.usd').value,
+                        brlComprado: row.querySelector('.brl-comprado').value,
+                        observation: row.querySelector('.observation').value
+                    };
+                })
+            };
+            const timestamp = getCurrentTimestamp();
+            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `btc_table_data_${timestamp}.json`;
+            link.click();
+        };
+
+        const importData = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = JSON.parse(e.target.result);
+
+                btcToUsdInput.value = data.btcToUsd || '';
+                usdToBrlInput.value = data.usdToBrl || '';
+
+                tableBody.innerHTML = '';
+                data.rows.forEach(createRow);
+
+                updateTotals();
+            };
+            reader.readAsText(file);
+        };
+
+        document.getElementById('addRow').addEventListener('click', () => {
+            createRow();
+            updateTotals();
+        });
+
+        document.getElementById('removeRow').addEventListener('click', () => {
+            if (tableBody.children.length > 0) {
+                tableBody.removeChild(tableBody.lastChild);
+                updateTotals();
+            }
+        });
+
+        document.getElementById('exportData').addEventListener('click', exportData);
+
+        const fileInput = document.getElementById('fileInput');
+        document.getElementById('importData').addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', importData);
+
+        // Initialize table
+        updateTotals();
+    </script>
+
+
+            <script></script>
+        
+    
+</body>
