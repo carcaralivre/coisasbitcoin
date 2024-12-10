@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+            <style></style>
+        </head>
+        <body>
+            
+
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor de Satoshis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .converter {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        h1 {
+            margin-bottom: 20px;
+            font-size: 24px;
+            text-align: center;
+        }
+        .input-group {
+            margin-bottom: 15px;
+            width: 100%;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .input-group input {
+            width: calc(100% - 20px);
+            margin: 0 auto;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            text-align: center;
+            display: block;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 14px;
+            text-align: center;
+            color: #555;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            background: #007BFF;
+            color: #fff;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+
+
+    <div class="converter">
+        <h1>Conversor de Satoshis</h1>
+        <div class="input-group">
+            <label for="satsInput">Satoshis (sats):</label>
+            <input type="number" id="satsInput" placeholder="Digite o valor em sats" oninput="updateFromSats()">
+        </div>
+        <div class="input-group">
+            <label for="btcInput">Bitcoin (BTC):</label>
+            <input type="number" id="btcInput" placeholder="Digite o valor em BTC" oninput="updateFromBTC()">
+        </div>
+        <div class="input-group">
+            <label for="usdInput">Dólar (USD):</label>
+            <input type="number" id="usdInput" placeholder="Digite o valor em USD" oninput="updateFromUSD()">
+        </div>
+        <div class="input-group">
+            <label for="brlInput">Real (BRL):</label>
+            <input type="number" id="brlInput" placeholder="Digite o valor em BRL" oninput="updateFromBRL()">
+        </div>
+        <button onclick="refreshExchangeRates()">Atualizar Câmbio</button>
+        <div class="footer" id="footer">Última atualização: 12/10/2024, 12:18:11 AM</div>
+    </div>
+
+    <script>
+        let btcToUsd = 0;
+        let btcToBrl = 0;
+        let lastUpdated = null;
+
+        async function fetchExchangeRates() {
+            const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd,brl");
+            const data = await response.json();
+            btcToUsd = data.bitcoin.usd;
+            btcToBrl = data.bitcoin.brl;
+            lastUpdated = new Date();
+        }
+
+        function displayLastUpdated() {
+            const footer = document.getElementById("footer");
+            footer.innerText = `Última atualização: ${lastUpdated ? lastUpdated.toLocaleString() : "Carregando..."}`;
+        }
+
+        async function refreshExchangeRates() {
+            await fetchExchangeRates();
+            updateFromSats(); // Atualiza os valores com o novo câmbio
+            displayLastUpdated();
+        }
+
+        function updateFromSats() {
+            const sats = parseFloat(document.getElementById("satsInput").value) || 0;
+            const btc = sats / 100_000_000;
+            const usd = btc * btcToUsd;
+            const brl = btc * btcToBrl;
+
+            setValues(btc, usd, brl, sats);
+        }
+
+        function updateFromBTC() {
+            const btc = parseFloat(document.getElementById("btcInput").value) || 0;
+            const sats = btc * 100_000_000;
+            const usd = btc * btcToUsd;
+            const brl = btc * btcToBrl;
+
+            setValues(btc, usd, brl, sats);
+        }
+
+        function updateFromUSD() {
+            const usd = parseFloat(document.getElementById("usdInput").value) || 0;
+            const btc = usd / btcToUsd;
+            const sats = btc * 100_000_000;
+            const brl = btc * btcToBrl;
+
+            setValues(btc, usd, brl, sats);
+        }
+
+        function updateFromBRL() {
+            const brl = parseFloat(document.getElementById("brlInput").value) || 0;
+            const btc = brl / btcToBrl;
+            const sats = btc * 100_000_000;
+            const usd = btc * btcToUsd;
+
+            setValues(btc, usd, brl, sats);
+        }
+
+        function setValues(btc, usd, brl, sats) {
+            document.getElementById("btcInput").value = btc.toFixed(8);
+            document.getElementById("usdInput").value = usd.toFixed(2);
+            document.getElementById("brlInput").value = brl.toFixed(2);
+            document.getElementById("satsInput").value = sats.toFixed(0);
+        }
+
+        // Inicializa ao carregar a página
+        async function initialize() {
+            await fetchExchangeRates();
+            updateFromSats();
+            displayLastUpdated();
+        }
+
+        initialize();
+    </script>
+
+
+
+            <script></script>
+        
+    
+</body>
